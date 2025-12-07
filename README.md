@@ -1,4 +1,262 @@
-## TesseraOS MVP (Core Scope)
+## TesseraOS
+
+A modern, full-stack project management platform inspired by tools like Plutio and Monday.com. Built with Next.js 14 and NestJS.
+
+## 🚀 Features
+
+- **Project Management**: Create and manage projects with progress tracking
+- **Task Board**: Drag-and-drop Kanban board with status columns
+- **Client Management**: Manage client contacts and companies
+- **Invoicing**: Create and track invoices with line items
+- **Team Collaboration**: Project messaging and file sharing
+- **Client Portal**: Dedicated portal for clients to view their projects and invoices
+- **Authentication**: Secure JWT-based authentication with refresh tokens
+- **Role-Based Access**: Support for ADMIN, MEMBER, and CLIENT roles
+
+## 📦 Tech Stack
+
+### Frontend
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **State Management**: TanStack Query (React Query)
+- **Authentication**: NextAuth.js
+- **Forms**: React Hook Form + Zod validation
+- **Drag & Drop**: @dnd-kit
+- **Icons**: Lucide React
+
+### Backend
+- **Framework**: NestJS 10
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: JWT with Passport
+- **Storage**: S3-compatible (AWS S3 / MinIO)
+- **Cache**: Redis
+- **Validation**: class-validator
+
+## 🛠️ Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- Docker and Docker Compose
+- npm or yarn
+
+### Quick Start
+
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd TesseraOS
+```
+
+2. **Start infrastructure services**
+```bash
+docker-compose up -d
+```
+
+This starts:
+- PostgreSQL (port 5432)
+- Redis (port 6379)
+- MinIO (ports 9000, 9001)
+
+3. **Setup Backend**
+```bash
+cd backend
+npm install
+copy .env.example .env
+npx prisma generate
+npx prisma migrate dev
+npm run start:dev
+```
+
+Backend runs at http://localhost:3001
+
+4. **Setup Frontend**
+```bash
+cd frontend
+npm install
+copy .env.local.example .env.local
+npm run dev
+```
+
+Frontend runs at http://localhost:3000
+
+## 📚 Documentation
+
+- [Frontend README](./frontend/README.md) - Frontend setup and architecture
+- [Backend README](./backend/README.md) - API documentation and backend details
+
+## 🏗️ Project Structure
+
+```
+TesseraOS/
+├── frontend/               # Next.js frontend
+│   ├── app/               # App Router pages
+│   ├── components/        # React components
+│   ├── lib/               # Utilities and API client
+│   └── public/            # Static assets
+├── backend/               # NestJS backend
+│   ├── src/
+│   │   ├── auth/         # Authentication
+│   │   ├── clients/      # Client management
+│   │   ├── projects/     # Project management
+│   │   ├── tasks/        # Task management
+│   │   ├── invoices/     # Invoice management
+│   │   ├── messages/     # Messaging
+│   │   ├── files/        # File storage
+│   │   └── portal/       # Client portal
+│   └── prisma/           # Database schema
+└── docker-compose.yml    # Infrastructure services
+```
+
+## 🔑 Key Features Explained
+
+### Dashboard
+- Real-time project statistics
+- Recent tasks overview
+- Activity feed
+
+### Projects
+- Create and manage multiple projects
+- Link projects to clients
+- Track project status and progress
+- View project details with integrated task board
+
+### Task Management
+- Kanban board with drag-and-drop
+- Four status columns: Backlog, To Do, In Progress, Done
+- Priority levels (Low, Medium, High)
+- Task assignment to team members
+- Due date tracking
+- Automatic project progress calculation
+
+### Client Management
+- Store client contact information
+- Track client companies
+- View all projects and invoices per client
+
+### Invoicing
+- Create detailed invoices with line items
+- Link invoices to projects and clients
+- Track invoice status (Draft, Sent, Paid, Overdue)
+- Calculate subtotals and taxes automatically
+- Mark invoices as paid
+
+### Client Portal
+- Clients can view their projects
+- Access project tasks, messages, and files
+- View and download invoices
+- Role-based access control ensures data security
+
+### File Management
+- Upload files to projects
+- S3-compatible storage (supports AWS S3 and MinIO)
+- Secure signed URLs for downloads
+- Track file metadata and uploader
+
+### Team Collaboration
+- Project-based messaging
+- File attachments in messages
+- User profiles and avatars
+
+## 🔐 Authentication & Authorization
+
+- **JWT Authentication**: Secure token-based auth
+- **Refresh Tokens**: Long-lived refresh tokens (30 days)
+- **Role-Based Access Control**:
+  - ADMIN: Full system access
+  - MEMBER: Team member access
+  - CLIENT: Portal-only access
+- **Protected Routes**: All API endpoints require authentication
+- **Client Portal Scoping**: Clients can only access their own data
+
+## 🗄️ Database Schema
+
+### Core Models
+- **User**: System users with roles
+- **Client**: External clients/customers
+- **Project**: Projects with status and progress
+- **Task**: Tasks with status, priority, assignment
+- **Invoice**: Invoices with line items
+- **Message**: Project chat messages
+- **File**: Uploaded files with S3 storage
+
+### Key Relationships
+- Projects → Clients (many-to-one)
+- Tasks → Projects (many-to-one)
+- Tasks → Users (many-to-one, assignee)
+- Invoices → Clients (many-to-one)
+- Messages → Projects (many-to-one)
+- Files → Projects (many-to-one)
+
+## 🚀 Deployment
+
+### Backend Deployment
+
+1. Set environment variables in production
+2. Run database migrations: `npx prisma migrate deploy`
+3. Build: `npm run build`
+4. Start: `npm run start:prod`
+
+### Frontend Deployment
+
+1. Set `NEXTAUTH_URL` to your production domain
+2. Build: `npm run build`
+3. Start: `npm start`
+
+### Docker Deployment
+
+Production-ready Docker images can be built for both frontend and backend. Ensure PostgreSQL, Redis, and S3 storage are configured.
+
+## 📝 Environment Variables
+
+### Backend (.env)
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/tesseraos
+JWT_SECRET=your-secret-key
+REFRESH_TOKEN_SECRET=your-refresh-secret
+AWS_ACCESS_KEY_ID=minioadmin
+AWS_SECRET_ACCESS_KEY=minioadmin
+AWS_ENDPOINT=http://localhost:9000
+AWS_BUCKET_NAME=tesseraos
+REDIS_HOST=localhost
+REDIS_PORT=6379
+PORT=3001
+```
+
+### Frontend (.env.local)
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-nextauth-secret
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+MIT License - feel free to use this project for personal or commercial purposes.
+
+## 🙏 Acknowledgments
+
+Inspired by modern project management tools:
+- Plutio
+- Monday.com
+- Asana
+- Linear
+
+Built with amazing open-source technologies:
+- Next.js
+- NestJS
+- Prisma
+- TanStack Query
+- Tailwind CSS
+
+---
+
+**Happy Project Managing! 🎯** MVP (Core Scope)
 
 **Features in first slice**
 - Projects + Tasks: create project, add tasks, assign, due dates, list + board views (no recurrence/custom fields/timelines/tags/templates).
