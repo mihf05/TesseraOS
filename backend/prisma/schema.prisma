@@ -44,155 +44,166 @@ enum InvoiceStatus {
   CANCELED
 }
 
-enum TaskStatus {
-  TODO
-  IN_PROGRESS
-  DONE
-}
-
-enum InvoiceStatus {
-  DRAFT
-  UNPAID
-  PAID
-}
-
 model User {
   id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  name      String
   email     String   @unique
   password  String
-  role      UserRole
-  avatarUrl String?
+  name      String
+  role      UserRole @default(MEMBER)
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  projects    Project[] @relation("ProjectOwner")
-  tasks       Task[]    @relation("TaskAssignee")
-  messages    Message[]
-  uploaded    File[]    @relation("FileUploader")
-  portalClient Client?  @relation("ClientPortalUser", fields: [portalClientId], references: [id])
-  portalClientId String?
+  // Relations
+  assignedTasks Task[]
+  messages      Message[]
+  uploadedFiles File[]
+
+  @@map("users")
 }
 
 model Client {
   id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  company   String?
+  phone     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  name      String
-  email     String?
-  company   String?
-  status    String? // simple status field; refine later
 
-  portalUser   User?     @relation("ClientPortalUser", fields: [portalUserId], references: [id])
-  portalUserId String?
-
+  // Relations
   projects Project[]
   invoices Invoice[]
+
+  @@map("clients")
 }
 
 model Project {
-  id          String         @id @default(cuid())
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id          String        @id @default(cuid())
   name        String
   description String?
-  status      ProjectStatus  @default(ACTIVE)
+  status      ProjectStatus @default(NEW)
+  clientId    String?
+  startDate   DateTime?
   dueDate     DateTime?
+  progress    Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
-  owner     User    @relation("ProjectOwner", fields: [ownerId], references: [id])
-  ownerId   String
-  client    Client  @relation(fields: [clientId], references: [id])
-  clientId  String
-
+  // Relations
+  client   Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   tasks    Task[]
   invoices Invoice[]
   messages Message[]
   files    File[]
+
+  @@index([clientId])
+  @@index([status])
+  @@map("projects")
 }
 
 model Task {
-  id          String      @id @default(cuid())
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  title       String
-  description String?
-  dueDate     DateTime?
-  status      TaskStatus  @default(TODO)
-  order       Int         @default(0)
+  id           String        @id @default(cuid())
+  title        String
+  description  String?
+  status       TaskStatus    @default(TODO)
+  priority     TaskPriority? @default(MEDIUM)
+  projectId    String
+  assignedToId String?
+  dueDate      DateTime?
+  order        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId String
+  // Relations
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTo User?   @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
 
-  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  assigneeId String?
-
-  @@index([projectId, status, order])
+  @@index([projectId])
+  @@index([assignedToId])
+  @@index([status])
+  @@map("tasks")
 }
 
 model Invoice {
-  id        String        @id @default(cuid())
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  status    InvoiceStatus @default(DRAFT)
-  issueDate DateTime?
-  dueDate   DateTime?
-  currency  String        @default("USD")
-  total     Decimal       @default(0)
+  id          String        @id @default(cuid())
+  number      String        @unique
+  projectId   String?
+  clientId    String
+  status      InvoiceStatus @default(DRAFT)
+  issueDate   DateTime
+  dueDate     DateTime
+  paymentDate DateTime?
+  subtotal    Float         @default(0)
+  tax         Float         @default(0)
+  discount    Float         @default(0)
+  total       Float         @default(0)
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId String
-  client    Client  @relation(fields: [clientId], references: [id])
-  clientId  String
-
-  items InvoiceItem[]
+  // Relations
+  project Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  client  Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  items   InvoiceItem[]
 
   @@index([clientId])
   @@index([projectId])
+  @@index([status])
+  @@map("invoices")
 }
 
 model InvoiceItem {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  name      String
-  qty       Int
-  rate      Decimal
-  amount    Decimal @default(0)
+  id          String  @id @default(cuid())
+  invoiceId   String
+  name        String
+  description String?
+  quantity    Float
+  rate        Float
+  amount      Float
 
-  invoice   Invoice @relation(fields: [invoiceId], references: [id])
-  invoiceId String
+  // Relations
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
+  @@map("invoice_items")
 }
 
 model Message {
   id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  body      String
-
-  project   Project @relation(fields: [projectId], references: [id])
   projectId String
+  userId    String
+  content   String   @db.Text
+  fileIds   String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  sender   User   @relation(fields: [senderId], references: [id])
-  senderId String
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  fileIds String[] @default([]) // store referenced file IDs when messages include uploads
-
-  @@index([projectId, createdAt])
+  @@index([projectId])
+  @@index([userId])
+  @@map("messages")
 }
 
 model File {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  filename  String
-  url       String
-  size      Int
-  mimeType  String
+  id           String   @id @default(cuid())
+  name         String
+  size         Int
+  mimeType     String
+  key          String   // S3/storage key
+  url          String
+  projectId    String?
+  uploadedById String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId String
-
-  uploader   User   @relation("FileUploader", fields: [uploaderId], references: [id])
-  uploaderId String
+  // Relations
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  uploadedBy User     @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+  @@index([uploadedById])
+  @@map("files")
 }
