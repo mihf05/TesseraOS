@@ -5,7 +5,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -51,14 +50,17 @@ model User {
   name      String
   role      UserRole @default(MEMBER)
   avatar    String?
+  clientId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
+  client        Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
   assignedTasks Task[]
   messages      Message[]
   uploadedFiles File[]
 
+  @@index([clientId])
   @@map("users")
 }
 
@@ -72,6 +74,7 @@ model Client {
   updatedAt DateTime @updatedAt
 
   // Relations
+  users    User[]
   projects Project[]
   invoices Invoice[]
 
@@ -133,10 +136,9 @@ model Invoice {
   status      InvoiceStatus @default(DRAFT)
   issueDate   DateTime
   dueDate     DateTime
-  paymentDate DateTime?
+  paidDate    DateTime?
   subtotal    Float         @default(0)
   tax         Float         @default(0)
-  discount    Float         @default(0)
   total       Float         @default(0)
   notes       String?
   createdAt   DateTime      @default(now())
