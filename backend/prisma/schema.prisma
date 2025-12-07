@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+  CLIENT
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  UNPAID
+  PAID
+}
+
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole
+  avatarUrl String?
+
+  projects    Project[] @relation("ProjectOwner")
+  tasks       Task[]    @relation("TaskAssignee")
+  messages    Message[]
+  uploaded    File[]    @relation("FileUploader")
+  portalClient Client?  @relation("ClientPortalUser", fields: [portalClientId], references: [id])
+  portalClientId String?
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String
+  email     String?
+  company   String?
+  status    String? // simple status field; refine later
+
+  portalUser   User?     @relation("ClientPortalUser", fields: [portalUserId], references: [id])
+  portalUserId String?
+
+  projects Project[]
+  invoices Invoice[]
+}
+
+model Project {
+  id          String         @id @default(cuid())
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  name        String
+  description String?
+  status      ProjectStatus  @default(ACTIVE)
+  dueDate     DateTime?
+
+  owner     User    @relation("ProjectOwner", fields: [ownerId], references: [id])
+  ownerId   String
+  client    Client  @relation(fields: [clientId], references: [id])
+  clientId  String
+
+  tasks    Task[]
+  invoices Invoice[]
+  messages Message[]
+  files    File[]
+}
+
+model Task {
+  id          String      @id @default(cuid())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      TaskStatus  @default(TODO)
+  order       Int         @default(0)
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assigneeId String?
+
+  @@index([projectId, status, order])
+}
+
+model Invoice {
+  id        String        @id @default(cuid())
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  status    InvoiceStatus @default(DRAFT)
+  issueDate DateTime?
+  dueDate   DateTime?
+  currency  String        @default("USD")
+  total     Decimal       @default(0)
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+  client    Client  @relation(fields: [clientId], references: [id])
+  clientId  String
+
+  items InvoiceItem[]
+
+  @@index([clientId])
+  @@index([projectId])
+}
+
+model InvoiceItem {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  name      String
+  qty       Int
+  rate      Decimal
+  amount    Decimal @default(0)
+
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+  invoiceId String
+
+  @@index([invoiceId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  body      String
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  sender   User   @relation(fields: [senderId], references: [id])
+  senderId String
+
+  fileIds String[] @default([]) // store referenced file IDs when messages include uploads
+
+  @@index([projectId, createdAt])
+}
+
+model File {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  filename  String
+  url       String
+  size      Int
+  mimeType  String
+
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String
+
+  uploader   User   @relation("FileUploader", fields: [uploaderId], references: [id])
+  uploaderId String
+
+  @@index([projectId])
+}
