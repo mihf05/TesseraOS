@@ -1,6 +1,4 @@
-# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
-
 reviews:
   auto_review:
-    enabled: true           # enable automatic reviews
-  review_status: true       # show review status (set to false to hide the message)
+    enabled: true
+  review_status: false
